@@ -6,6 +6,7 @@ var tcDefaults = {
   rememberSpeed: false, // default: false
   audioBoolean: false, // default: false
   startHidden: false, // default: false
+  forceLastSavedSpeed: false, //default: false
   enabled: true, // default enabled
   controllerOpacity: 0.3, // default: 0.3
   keyBindings: [
@@ -17,10 +18,8 @@ var tcDefaults = {
     { action: "reset", key: 82, value: 1, force: false, predefined: true }, // R
     { action: "fast", key: 71, value: 1.8, force: false, predefined: true } // G
   ],
-  blacklist: `\
-    www.instagram.com
+  blacklist: `www.instagram.com
     twitter.com
-    vine.co
     imgur.com
     teams.microsoft.com
   `.replace(regStrip, "")
@@ -148,7 +147,7 @@ function add_shortcut() {
     <input class="customValue" type="text" placeholder="value (0.10)"/>
     <select class="customForce">
     <option value="false">Do not disable website key bindings</option>
-    <option value="true">Disable websites key bindings</option>
+    <option value="true">Disable website key bindings</option>
     </select>
     <button class="removeParent">X</button>`;
   var div = document.createElement("div");
@@ -184,14 +183,14 @@ function validate() {
   document
     .getElementById("blacklist")
     .value.split("\n")
-    .forEach(match => {
+    .forEach((match) => {
       match = match.replace(regStrip, "");
       if (match.startsWith("/")) {
         try {
           var regexp = new RegExp(match);
         } catch (err) {
           status.textContent =
-            "Error: Invalid Regex: " + match + ". Unable to save";
+            "Error: Invalid blacklist regex: " + match + ". Unable to save";
           valid = false;
           return;
         }
@@ -206,11 +205,12 @@ function save_options() {
     return;
   }
   keyBindings = [];
-  Array.from(document.querySelectorAll(".customs")).forEach(item =>
+  Array.from(document.querySelectorAll(".customs")).forEach((item) =>
     createKeyBindings(item)
   ); // Remove added shortcuts
 
   var rememberSpeed = document.getElementById("rememberSpeed").checked;
+  var forceLastSavedSpeed = document.getElementById("forceLastSavedSpeed").checked;
   var audioBoolean = document.getElementById("audioBoolean").checked;
   var enabled = document.getElementById("enabled").checked;
   var startHidden = document.getElementById("startHidden").checked;
@@ -233,6 +233,7 @@ function save_options() {
   chrome.storage.sync.set(
     {
       rememberSpeed: rememberSpeed,
+      forceLastSavedSpeed: forceLastSavedSpeed,
       audioBoolean: audioBoolean,
       enabled: enabled,
       startHidden: startHidden,
@@ -240,11 +241,11 @@ function save_options() {
       keyBindings: keyBindings,
       blacklist: blacklist.replace(regStrip, "")
     },
-    function() {
+    function () {
       // Update status to let user know options were saved.
       var status = document.getElementById("status");
       status.textContent = "Options saved";
-      setTimeout(function() {
+      setTimeout(function () {
         status.textContent = "";
       }, 1000);
     }
@@ -253,8 +254,9 @@ function save_options() {
 
 // Restores options from chrome.storage
 function restore_options() {
-  chrome.storage.sync.get(tcDefaults, function(storage) {
+  chrome.storage.sync.get(tcDefaults, function (storage) {
     document.getElementById("rememberSpeed").checked = storage.rememberSpeed;
+    document.getElementById("forceLastSavedSpeed").checked = storage.forceLastSavedSpeed;
     document.getElementById("audioBoolean").checked = storage.audioBoolean;
     document.getElementById("enabled").checked = storage.enabled;
     document.getElementById("startHidden").checked = storage.startHidden;
@@ -263,7 +265,7 @@ function restore_options() {
     document.getElementById("blacklist").value = storage.blacklist;
 
     // ensure that there is a "display" binding for upgrades from versions that had it as a separate binding
-    if (storage.keyBindings.filter(x => x.action == "display").length == 0) {
+    if (storage.keyBindings.filter((x) => x.action == "display").length == 0) {
       storage.keyBindings.push({
         action: "display",
         value: 0,
@@ -315,15 +317,15 @@ function restore_options() {
 }
 
 function restore_defaults() {
-  chrome.storage.sync.set(tcDefaults, function() {
+  chrome.storage.sync.set(tcDefaults, function () {
     restore_options();
     document
       .querySelectorAll(".removeParent")
-      .forEach(button => button.click()); // Remove added shortcuts
+      .forEach((button) => button.click()); // Remove added shortcuts
     // Update status to let user know options were saved.
     var status = document.getElementById("status");
     status.textContent = "Default options restored";
-    setTimeout(function() {
+    setTimeout(function () {
       status.textContent = "";
     }, 1000);
   });
@@ -332,10 +334,10 @@ function restore_defaults() {
 function show_experimental() {
   document
     .querySelectorAll(".customForce")
-    .forEach(item => (item.style.display = "inline-block"));
+    .forEach((item) => (item.style.display = "inline-block"));
 }
 
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
   restore_options();
 
   document.getElementById("save").addEventListener("click", save_options);
@@ -354,25 +356,25 @@ document.addEventListener("DOMContentLoaded", function() {
     funcName(event);
   }
 
-  document.addEventListener("keypress", event => {
+  document.addEventListener("keypress", (event) => {
     eventCaller(event, "customValue", inputFilterNumbersOnly);
   });
-  document.addEventListener("focus", event => {
+  document.addEventListener("focus", (event) => {
     eventCaller(event, "customKey", inputFocus);
   });
-  document.addEventListener("blur", event => {
+  document.addEventListener("blur", (event) => {
     eventCaller(event, "customKey", inputBlur);
   });
-  document.addEventListener("keydown", event => {
+  document.addEventListener("keydown", (event) => {
     eventCaller(event, "customKey", recordKeyPress);
   });
-  document.addEventListener("click", event => {
-    eventCaller(event, "removeParent", function() {
+  document.addEventListener("click", (event) => {
+    eventCaller(event, "removeParent", function () {
       event.target.parentNode.remove();
     });
   });
-  document.addEventListener("change", event => {
-    eventCaller(event, "customDo", function() {
+  document.addEventListener("change", (event) => {
+    eventCaller(event, "customDo", function () {
       if (customActionsNoValues.includes(event.target.value)) {
         event.target.nextElementSibling.nextElementSibling.disabled = true;
         event.target.nextElementSibling.nextElementSibling.value = 0;
